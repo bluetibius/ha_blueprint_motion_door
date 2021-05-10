@@ -3,7 +3,7 @@ blueprint:
   description: >
     
   domain: automation
-  source_url: 
+  source_url: https://github.com/bluetibius/ha_blueprint_motion_door/blob/main/motion_door.yaml
   input:
     motion_entity:
       name: Motion Sensor
