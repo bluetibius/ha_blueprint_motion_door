@@ -1,0 +1,83 @@
+blueprint:
+  name: Motion and Door
+  description: >
+    
+  domain: automation
+  source_url: 
+  input:
+    motion_entity:
+      name: Motion Sensor
+      description: Motion Sensor
+      selector:
+        entity:
+    door_entity:
+      name: Door Sensor
+      description: Door Sensor
+      selector:
+        entity:
+    light_target:
+      name: Light
+      selector:
+        target:
+          entity:
+            domain: light
+    no_motion_wait:
+      name: Wait time
+      description: Time to leave the light on after last motion is detected.
+      default: 120
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+
+
+mode: restart
+max_exceeded: silent
+
+variables:
+  motion_entity: !input motion_entity
+  door_entity: !input door_entity
+
+trigger:
+  - platform: state
+    entity_id: !input motion_entity
+    from: "off"
+    to: "on"
+  - platform: state
+    entity_id: !input motion_entity
+    from: "on"
+    to: "off"
+  - platform: state
+    entity_id: !input door_entity
+    from: "on"
+    to: "off"
+
+action:
+  - choose:
+      # Trigger to state == "on"
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state == 'on' }}" 
+        sequence:
+          - choose:
+            # If State -> "On" defaulting to turn light on
+            default:
+              - service: light.turn_on
+                target: !input light_target
+      # Trigger to state = "off"
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state == 'off' }}"
+          # Check if no motion blocker exist or in in desired state, otherwise do not run any no motion action            
+          - condition: or
+            conditions:
+              - "{{ no_motion_blocker == none }}"
+              - "{{ no_motion_blocker_boolean and states[no_motion_blocker].state == 'on' }}"
+              - "{{ not no_motion_blocker_boolean and states[no_motion_blocker].state == 'off' }}"
+        sequence:          
+          - choose:
+              # If State -> "off" default to turn lights off
+            default:
+              - service: light.turn_off
+                target: !input light_target
